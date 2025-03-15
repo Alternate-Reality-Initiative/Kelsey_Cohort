@@ -33,7 +33,7 @@ namespace Es.InkPainter
 			public Material material;
 
 			[SerializeField, Tooltip("The property name of the main texture.")]
-			public string mainTextureName = "_MainTex";
+			public string mainTextureName = "_BaseMap";
 
 			[SerializeField, Tooltip("Normal map texture property name.")]
 			public string normalTextureName = "_BumpMap";
