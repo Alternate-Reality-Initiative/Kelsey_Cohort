@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Es.InkPainter.Effective;
+using System.Runtime.CompilerServices;
+
 
 #if UNITY_EDITOR
 
@@ -144,11 +146,29 @@ namespace Es.InkPainter
 			/// <param name="useHeightPaint">Whether to use height map paint.</param>
 			/// <param name="material">Specify when painting a specific material.</param>
 			public PaintSet(string mainTextureName, string normalTextureName, string heightTextureName, bool useMainPaint, bool useNormalPaint, bool useHeightPaint, Material material)
-				:this(mainTextureName, normalTextureName, heightTextureName, useMainPaint, useNormalPaint, useHeightPaint)
+				: this(mainTextureName, normalTextureName, heightTextureName, useMainPaint, useNormalPaint, useHeightPaint)
 			{
 				this.material = material;
 			}
 			#endregion Constractor
+		}
+
+		private class InkCanvasStates
+		{
+			public List<Texture2D> mainSnapshots;
+			public List<Texture2D> normalSnapshots;
+			public List<Texture2D> heightSnapshots;
+
+			public int index = -1;
+
+			public int Count => mainSnapshots.Count;
+
+			public InkCanvasStates()
+			{
+				mainSnapshots = new List<Texture2D>();
+				normalSnapshots = new List<Texture2D>();
+				heightSnapshots = new List<Texture2D>();
+			}
 		}
 
 		private static Material paintMainMaterial = null;
@@ -161,6 +181,10 @@ namespace Es.InkPainter
 #pragma warning disable 0649
 		private bool eraserDebug;
 #pragma warning restore 0649
+
+		// This will only work if you have 1 paintSet I think
+		private const int maxStates = 10;
+		InkCanvasStates states = new InkCanvasStates();
 
 		/// <summary>
 		/// Access data used for painting.
@@ -247,7 +271,7 @@ namespace Es.InkPainter
 		{
 			get
 			{
-				if(meshOperator == null)
+				if (meshOperator == null)
 					Debug.LogError("To take advantage of the features must Mesh filter or Skinned mesh renderer component associated Mesh.");
 
 				return meshOperator;
@@ -260,7 +284,7 @@ namespace Es.InkPainter
 
 		private void Awake()
 		{
-			if(OnCanvasAttached != null)
+			if (OnCanvasAttached != null)
 				OnCanvasAttached(this);
 			InitPropertyID();
 			SetMaterial();
@@ -270,11 +294,13 @@ namespace Es.InkPainter
 
 		private void Start()
 		{
-			if(OnInitializedStart != null)
+			if (OnInitializedStart != null)
 				OnInitializedStart(this);
 			SetRenderTexture();
-			if(OnInitializedAfter != null)
+			if (OnInitializedAfter != null)
 				OnInitializedAfter(this);
+
+			SaveSnapshot();
 		}
 
 		private void OnDestroy()
@@ -285,14 +311,14 @@ namespace Es.InkPainter
 
 		private void OnGUI()
 		{
-			if(eraserDebug)
+			if (eraserDebug)
 			{
-				if(debugEraserMainView!=null)
-				GUI.DrawTexture(new Rect(0, 0, 100, 100), debugEraserMainView);
-				if(debugEraserNormalView!=null)
-				GUI.DrawTexture(new Rect(0, 100, 100, 100), debugEraserNormalView);
-				if(debugEraserHeightView!=null)
-				GUI.DrawTexture(new Rect(0, 200, 100, 100), debugEraserHeightView);
+				if (debugEraserMainView != null)
+					GUI.DrawTexture(new Rect(0, 0, 100, 100), debugEraserMainView);
+				if (debugEraserNormalView != null)
+					GUI.DrawTexture(new Rect(0, 100, 100, 100), debugEraserNormalView);
+				if (debugEraserHeightView != null)
+					GUI.DrawTexture(new Rect(0, 200, 100, 100), debugEraserHeightView);
 			}
 		}
 
@@ -307,9 +333,9 @@ namespace Es.InkPainter
 		{
 			var meshFilter = GetComponent<MeshFilter>();
 			var skinnedMeshRenderer = GetComponent<SkinnedMeshRenderer>();
-			if(meshFilter != null)
+			if (meshFilter != null)
 				meshOperator = new MeshOperator(meshFilter.sharedMesh);
-			else if(skinnedMeshRenderer != null)
+			else if (skinnedMeshRenderer != null)
 				meshOperator = new MeshOperator(skinnedMeshRenderer.sharedMesh);
 			else
 				Debug.LogWarning("Sometimes if the MeshFilter or SkinnedMeshRenderer does not exist in the component part does not work correctly.");
@@ -320,7 +346,7 @@ namespace Es.InkPainter
 		/// </summary>
 		private void InitPropertyID()
 		{
-			foreach(var p in paintSet)
+			foreach (var p in paintSet)
 			{
 				p.mainTexturePropertyID = Shader.PropertyToID(p.mainTextureName);
 				p.normalTexturePropertyID = Shader.PropertyToID(p.normalTextureName);
@@ -343,17 +369,17 @@ namespace Es.InkPainter
 		/// </summary>
 		private void SetMaterial()
 		{
-			if(paintMainMaterial == null)
+			if (paintMainMaterial == null)
 				paintMainMaterial = new Material(Resources.Load<Material>("Es.InkPainter.PaintMain"));
-			if(paintNormalMaterial == null)
+			if (paintNormalMaterial == null)
 				paintNormalMaterial = new Material(Resources.Load<Material>("Es.InkPainter.PaintNormal"));
-			if(paintHeightMaterial == null)
+			if (paintHeightMaterial == null)
 				paintHeightMaterial = new Material(Resources.Load<Material>("Es.InkPainter.PaintHeight"));
 			var m = GetComponent<Renderer>().materials;
-			for(int i = 0; i < m.Length; ++i)
+			for (int i = 0; i < m.Length; ++i)
 			{
-                if (paintSet[i].material == null)
-                    paintSet[i].material = m[i];
+				if (paintSet[i].material == null)
+					paintSet[i].material = m[i];
 			}
 		}
 
@@ -362,13 +388,13 @@ namespace Es.InkPainter
 		/// </summary>
 		private void SetTexture()
 		{
-			foreach(var p in paintSet)
+			foreach (var p in paintSet)
 			{
-				if(p.material.HasProperty(p.mainTexturePropertyID))
+				if (p.material.HasProperty(p.mainTexturePropertyID))
 					p.mainTexture = p.material.GetTexture(p.mainTexturePropertyID);
-				if(p.material.HasProperty(p.normalTexturePropertyID))
+				if (p.material.HasProperty(p.normalTexturePropertyID))
 					p.normalTexture = p.material.GetTexture(p.normalTexturePropertyID);
-				if(p.material.HasProperty(p.heightTexturePropertyID))
+				if (p.material.HasProperty(p.heightTexturePropertyID))
 					p.heightTexture = p.material.GetTexture(p.heightTexturePropertyID);
 			}
 		}
@@ -393,25 +419,25 @@ namespace Es.InkPainter
 		/// </summary>
 		private void SetRenderTexture()
 		{
-			foreach(var p in paintSet)
+			foreach (var p in paintSet)
 			{
-				if(p.useMainPaint)
+				if (p.useMainPaint)
 				{
-					if(p.mainTexture != null)
+					if (p.mainTexture != null)
 						p.paintMainTexture = SetupRenderTexture(p.mainTexture, p.mainTexturePropertyID, p.material);
 					else
 						Debug.LogWarning("To take advantage of the main texture paint must set main texture to materials.");
 				}
-				if(p.useNormalPaint)
+				if (p.useNormalPaint)
 				{
-					if(p.normalTexture != null)
+					if (p.normalTexture != null)
 						p.paintNormalTexture = SetupRenderTexture(p.normalTexture, p.normalTexturePropertyID, p.material);
 					else
 						Debug.LogWarning("To take advantage of the normal map paint must set normal map to materials.");
 				}
-				if(p.useHeightPaint)
+				if (p.useHeightPaint)
 				{
-					if(p.heightTexture != null)
+					if (p.heightTexture != null)
 						p.paintHeightTexture = SetupRenderTexture(p.heightTexture, p.heightTexturePropertyID, p.material);
 					else
 						Debug.LogWarning("To take advantage of the height map paint must set height map to materials.");
@@ -424,13 +450,13 @@ namespace Es.InkPainter
 		/// </summary>
 		private void ReleaseRenderTexture()
 		{
-			foreach(var p in paintSet)
+			foreach (var p in paintSet)
 			{
-				if(RenderTexture.active != p.paintMainTexture && p.paintMainTexture != null && p.paintMainTexture.IsCreated())
+				if (RenderTexture.active != p.paintMainTexture && p.paintMainTexture != null && p.paintMainTexture.IsCreated())
 					p.paintMainTexture.Release();
-				if(RenderTexture.active != p.paintNormalTexture && p.paintNormalTexture != null && p.paintNormalTexture.IsCreated())
+				if (RenderTexture.active != p.paintNormalTexture && p.paintNormalTexture != null && p.paintNormalTexture.IsCreated())
 					p.paintNormalTexture.Release();
-				if(RenderTexture.active != p.paintHeightTexture && p.paintHeightTexture != null && p.paintHeightTexture.IsCreated())
+				if (RenderTexture.active != p.paintHeightTexture && p.paintHeightTexture != null && p.paintHeightTexture.IsCreated())
 					p.paintHeightTexture.Release();
 			}
 		}
@@ -448,9 +474,9 @@ namespace Es.InkPainter
 			paintMainMaterial.SetFloat(brushRotatePropertyID, brush.RotateAngle);
 			paintMainMaterial.SetVector(brushColorPropertyID, brush.Color);
 
-			foreach(var key in paintMainMaterial.shaderKeywords)
+			foreach (var key in paintMainMaterial.shaderKeywords)
 				paintMainMaterial.DisableKeyword(key);
-			switch(brush.ColorBlending)
+			switch (brush.ColorBlending)
 			{
 				case Brush.ColorBlendType.UseColor:
 					paintMainMaterial.EnableKeyword(COLOR_BLEND_USE_CONTROL);
@@ -488,9 +514,9 @@ namespace Es.InkPainter
 			paintNormalMaterial.SetFloat(brushRotatePropertyID, brush.RotateAngle);
 			paintNormalMaterial.SetFloat(brushNormalBlendPropertyID, brush.NormalBlend);
 
-			foreach(var key in paintNormalMaterial.shaderKeywords)
+			foreach (var key in paintNormalMaterial.shaderKeywords)
 				paintNormalMaterial.DisableKeyword(key);
-			switch(brush.NormalBlending)
+			switch (brush.NormalBlending)
 			{
 				case Brush.NormalBlendType.UseBrush:
 					paintNormalMaterial.EnableKeyword(NORMAL_BLEND_USE_BRUSH);
@@ -517,7 +543,7 @@ namespace Es.InkPainter
 					break;
 			}
 
-			switch(erase)
+			switch (erase)
 			{
 				case true:
 					paintNormalMaterial.EnableKeyword(DXT5NM_COMPRESS_UNUSE);
@@ -543,9 +569,9 @@ namespace Es.InkPainter
 			paintHeightMaterial.SetFloat(brushHeightBlendPropertyID, brush.HeightBlend);
 			paintHeightMaterial.SetVector(brushHeightColorPropertyID, brush.Color);
 
-			foreach(var key in paintHeightMaterial.shaderKeywords)
+			foreach (var key in paintHeightMaterial.shaderKeywords)
 				paintHeightMaterial.DisableKeyword(key);
-			switch(brush.HeightBlending)
+			switch (brush.HeightBlending)
 			{
 				case Brush.HeightBlendType.UseBrush:
 					paintHeightMaterial.EnableKeyword(HEIGHT_BLEND_USE_BRUSH);
@@ -597,39 +623,39 @@ namespace Es.InkPainter
 			b.NormalBlend = 1f;
 			b.HeightBlend = 1f;
 
-			if(useMainPaint)
+			if (useMainPaint)
 			{
 				var rt = RenderTexture.GetTemporary(brush.BrushTexture.width, brush.BrushTexture.height);
 				GrabArea.Clip(brush.BrushTexture, brush.Scale, paintSet.mainTexture, uv, brush.RotateAngle, GrabArea.GrabTextureWrapMode.Clamp, rt);
 				b.BrushTexture = rt;
 			}
-			if(useNormalPaint)
+			if (useNormalPaint)
 			{
 				var rt = RenderTexture.GetTemporary(brush.BrushNormalTexture.width, brush.BrushNormalTexture.height);
 				GrabArea.Clip(brush.BrushNormalTexture, brush.Scale, paintSet.normalTexture, uv, brush.RotateAngle, GrabArea.GrabTextureWrapMode.Clamp, rt, false);
 				b.BrushNormalTexture = rt;
 			}
-			if(useHeightpaint)
+			if (useHeightpaint)
 			{
 				var rt = RenderTexture.GetTemporary(brush.BrushHeightTexture.width, brush.BrushHeightTexture.height);
 				GrabArea.Clip(brush.BrushHeightTexture, brush.Scale, paintSet.heightTexture, uv, brush.RotateAngle, GrabArea.GrabTextureWrapMode.Clamp, rt, false);
 				b.BrushHeightTexture = rt;
 			}
 
-			if(eraserDebug)
+			if (eraserDebug)
 			{
-				if(debugEraserMainView == null && useMainPaint)
+				if (debugEraserMainView == null && useMainPaint)
 					debugEraserMainView = new RenderTexture(b.BrushTexture.width, b.BrushTexture.height, 0);
-				if(debugEraserNormalView == null && useNormalPaint)
+				if (debugEraserNormalView == null && useNormalPaint)
 					debugEraserNormalView = new RenderTexture(b.BrushNormalTexture.width, b.BrushNormalTexture.height, 0);
-				if(debugEraserHeightView == null && useHeightpaint)
+				if (debugEraserHeightView == null && useHeightpaint)
 					debugEraserHeightView = new RenderTexture(b.BrushHeightTexture.width, b.BrushHeightTexture.height, 0);
 
-				if(useMainPaint)
+				if (useMainPaint)
 					Graphics.Blit(b.BrushTexture, debugEraserMainView);
-				if(useNormalPaint)
+				if (useNormalPaint)
 					Graphics.Blit(b.BrushNormalTexture, debugEraserNormalView);
-				if(useHeightpaint)
+				if (useHeightpaint)
 					Graphics.Blit(b.BrushHeightTexture, debugEraserHeightView);
 			}
 
@@ -645,13 +671,13 @@ namespace Es.InkPainter
 		/// <param name="useHeightpaint">Whether paint is effective.</param>
 		private void ReleaseEraser(Brush brush, bool useMainPaint, bool useNormalPaint, bool useHeightpaint)
 		{
-			if(useMainPaint && brush.BrushTexture is RenderTexture)
+			if (useMainPaint && brush.BrushTexture is RenderTexture)
 				RenderTexture.ReleaseTemporary(brush.BrushTexture as RenderTexture);
 
-			if(useNormalPaint && brush.BrushNormalTexture is RenderTexture)
+			if (useNormalPaint && brush.BrushNormalTexture is RenderTexture)
 				RenderTexture.ReleaseTemporary(brush.BrushNormalTexture as RenderTexture);
 
-			if(useHeightpaint && brush.BrushHeightTexture is RenderTexture)
+			if (useHeightpaint && brush.BrushHeightTexture is RenderTexture)
 				RenderTexture.ReleaseTemporary(brush.BrushHeightTexture as RenderTexture);
 		}
 
@@ -669,7 +695,7 @@ namespace Es.InkPainter
 		{
 			#region ErrorCheck
 
-			if(brush == null)
+			if (brush == null)
 			{
 				Debug.LogError("Do not set the brush.");
 				eraseFlag = false;
@@ -678,23 +704,23 @@ namespace Es.InkPainter
 
 			#endregion ErrorCheck
 
-			if(OnPaintStart != null)
+			if (OnPaintStart != null)
 			{
 				brush = brush.Clone() as Brush;
 				OnPaintStart(this, brush);
 			}
 
 			var set = materialSelector == null ? paintSet : paintSet.Where(materialSelector);
-			foreach(var p in set)
+			foreach (var p in set)
 			{
 				var mainPaintConditions = p.useMainPaint && brush.BrushTexture != null && p.paintMainTexture != null && p.paintMainTexture.IsCreated();
 				var normalPaintConditions = p.useNormalPaint && brush.BrushNormalTexture != null && p.paintNormalTexture != null && p.paintNormalTexture.IsCreated();
 				var heightPaintConditions = p.useHeightPaint && brush.BrushHeightTexture != null && p.paintHeightTexture != null && p.paintHeightTexture.IsCreated();
 
-				if(eraseFlag)
+				if (eraseFlag)
 					brush = GetEraser(brush, p, uv, mainPaintConditions, normalPaintConditions, heightPaintConditions);
 
-				if(mainPaintConditions)
+				if (mainPaintConditions)
 				{
 					var mainPaintTextureBuffer = RenderTexture.GetTemporary(p.paintMainTexture.width, p.paintMainTexture.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
 					SetPaintMainData(brush, uv);
@@ -703,7 +729,7 @@ namespace Es.InkPainter
 					RenderTexture.ReleaseTemporary(mainPaintTextureBuffer);
 				}
 
-				if(normalPaintConditions)
+				if (normalPaintConditions)
 				{
 					var normalPaintTextureBuffer = RenderTexture.GetTemporary(p.paintNormalTexture.width, p.paintNormalTexture.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
 					SetPaintNormalData(brush, uv, eraseFlag);
@@ -712,7 +738,7 @@ namespace Es.InkPainter
 					RenderTexture.ReleaseTemporary(normalPaintTextureBuffer);
 				}
 
-				if(heightPaintConditions)
+				if (heightPaintConditions)
 				{
 					var heightPaintTextureBuffer = RenderTexture.GetTemporary(p.paintHeightTexture.width, p.paintHeightTexture.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
 					SetPaintHeightData(brush, uv);
@@ -721,11 +747,11 @@ namespace Es.InkPainter
 					RenderTexture.ReleaseTemporary(heightPaintTextureBuffer);
 				}
 
-				if(eraseFlag)
+				if (eraseFlag)
 					ReleaseEraser(brush, mainPaintConditions, normalPaintConditions, heightPaintConditions);
 			}
 
-			if(OnPaintEnd != null)
+			if (OnPaintEnd != null)
 				OnPaintEnd(this);
 
 			eraseFlag = false;
@@ -758,12 +784,12 @@ namespace Es.InkPainter
 		{
 			Vector2 uv;
 
-			if(renderCamera == null)
+			if (renderCamera == null)
 				renderCamera = Camera.main;
 
 			Vector3 p = transform.InverseTransformPoint(worldPos);
 			Matrix4x4 mvp = renderCamera.projectionMatrix * renderCamera.worldToCameraMatrix * transform.localToWorldMatrix;
-			if(MeshOperator.LocalPointToUV(p, mvp, out uv))
+			if (MeshOperator.LocalPointToUV(p, mvp, out uv))
 				return PaintUVDirect(brush, uv, materialSelector);
 			else
 			{
@@ -781,9 +807,9 @@ namespace Es.InkPainter
 		/// <returns>The success or failure of the paint.</returns>
 		public bool Paint(Brush brush, RaycastHit hitInfo, Func<PaintSet, bool> materialSelector = null)
 		{
-			if(hitInfo.collider != null)
+			if (hitInfo.collider != null)
 			{
-				if(hitInfo.collider is MeshCollider)
+				if (hitInfo.collider is MeshCollider)
 					return PaintUVDirect(brush, hitInfo.textureCoord, materialSelector);
 				Debug.LogWarning("If you want to paint using a RaycastHit, need set MeshCollider for object.");
 				return PaintNearestTriangleSurface(brush, hitInfo.point, materialSelector);
@@ -849,7 +875,7 @@ namespace Es.InkPainter
 		{
 			ReleaseRenderTexture();
 			SetRenderTexture();
-			if(OnInitializedAfter != null)
+			if (OnInitializedAfter != null)
 				OnInitializedAfter(this);
 		}
 
@@ -862,7 +888,7 @@ namespace Es.InkPainter
 		{
 			materialName = materialName.Replace(" (Instance)", "");
 			var data = paintSet.FirstOrDefault(p => p.material.name.Replace(" (Instance)", "") == materialName);
-			if(data == null)
+			if (data == null)
 				return null;
 			return data.mainTexture;
 		}
@@ -876,7 +902,7 @@ namespace Es.InkPainter
 		{
 			materialName = materialName.Replace(" (Instance)", "");
 			var data = paintSet.FirstOrDefault(p => p.material.name.Replace(" (Instance)", "") == materialName);
-			if(data == null)
+			if (data == null)
 				return null;
 			return data.paintMainTexture;
 		}
@@ -890,7 +916,7 @@ namespace Es.InkPainter
 		{
 			materialName = materialName.Replace(" (Instance)", "");
 			var data = paintSet.FirstOrDefault(p => p.material.name.Replace(" (Instance)", "") == materialName);
-			if(data == null)
+			if (data == null)
 			{
 				Debug.LogError("Failed to set texture.");
 				return;
@@ -909,7 +935,7 @@ namespace Es.InkPainter
 		{
 			materialName = materialName.Replace(" (Instance)", "");
 			var data = paintSet.FirstOrDefault(p => p.material.name.Replace(" (Instance)", "") == materialName);
-			if(data == null)
+			if (data == null)
 				return null;
 			return data.normalTexture;
 		}
@@ -923,7 +949,7 @@ namespace Es.InkPainter
 		{
 			materialName = materialName.Replace(" (Instance)", "");
 			var data = paintSet.FirstOrDefault(p => p.material.name.Replace(" (Instance)", "") == materialName);
-			if(data == null)
+			if (data == null)
 				return null;
 			return data.paintNormalTexture;
 		}
@@ -937,7 +963,7 @@ namespace Es.InkPainter
 		{
 			materialName = materialName.Replace(" (Instance)", "");
 			var data = paintSet.FirstOrDefault(p => p.material.name.Replace(" (Instance)", "") == materialName);
-			if(data == null)
+			if (data == null)
 			{
 				Debug.LogError("Failed to set texture.");
 				return;
@@ -956,7 +982,7 @@ namespace Es.InkPainter
 		{
 			materialName = materialName.Replace(" (Instance)", "");
 			var data = paintSet.FirstOrDefault(p => p.material.name.Replace(" (Instance)", "") == materialName);
-			if(data == null)
+			if (data == null)
 				return null;
 			return data.heightTexture;
 		}
@@ -970,7 +996,7 @@ namespace Es.InkPainter
 		{
 			materialName = materialName.Replace(" (Instance)", "");
 			var data = paintSet.FirstOrDefault(p => p.material.name.Replace(" (Instance)", "") == materialName);
-			if(data == null)
+			if (data == null)
 				return null;
 			return data.paintHeightTexture;
 		}
@@ -984,7 +1010,7 @@ namespace Es.InkPainter
 		{
 			materialName = materialName.Replace(" (Instance)", "");
 			var data = paintSet.FirstOrDefault(p => p.material.name.Replace(" (Instance)", "") == materialName);
-			if(data == null)
+			if (data == null)
 			{
 				Debug.LogError("Failed to set texture.");
 				return;
@@ -992,6 +1018,64 @@ namespace Es.InkPainter
 			data.paintHeightTexture = newTexture;
 			data.material.SetTexture(data.heightTextureName, data.paintHeightTexture);
 			data.useHeightPaint = true;
+		}
+
+		public void SaveSnapshot()
+		{
+			var p = paintSet[0];
+
+			if (p.useMainPaint && p.paintMainTexture != null)
+			{
+				var mainTex = p.paintMainTexture;
+				Texture2D mainTexSnapshot = new Texture2D(mainTex.width, mainTex.height, TextureFormat.ARGB32, false);
+				Graphics.CopyTexture(mainTex, mainTexSnapshot);
+				states.mainSnapshots.Add(mainTexSnapshot);
+			}
+
+			states.index += 1;
+
+			if (maxStates < states.Count)
+			{
+				states.mainSnapshots.RemoveAt(0);
+				states.index -= 1;
+			}
+
+			Debug.Log(states.Count + " " + states.index);
+		}
+
+		public void Undo()
+		{
+			if (states.index == 0)
+			{
+				return;
+			}
+
+			var p = paintSet[0];
+
+			if (p.useMainPaint && p.paintMainTexture != null)
+			{
+				Debug.Log("Undo: " + states.Count + ", " + states.index);
+				Graphics.Blit(states.mainSnapshots[states.index], p.paintMainTexture);
+			}
+
+			states.index -= 1;
+		}
+
+		public void Redo()
+		{
+			if (states.index >= states.Count - 1)
+			{
+				return;
+			}
+			var p = paintSet[0];
+
+			states.index += 1;
+
+			if (p.useMainPaint && p.paintMainTexture != null)
+			{
+				Debug.Log("Redo: " + states.Count + ", " + states.index);
+				Graphics.Blit(states.mainSnapshots[states.index], p.paintMainTexture);
+			}
 		}
 
 		#endregion PublicMethod
@@ -1011,19 +1095,19 @@ namespace Es.InkPainter
 			public override void OnInspectorGUI()
 			{
 				var instance = target as InkCanvas;
-				if(instance.paintSet == null)
+				if (instance.paintSet == null)
 					instance.paintSet = new List<PaintSet>();
 
-				if(renderer == null)
+				if (renderer == null)
 					renderer = instance.GetComponent<Renderer>();
-				if(materials == null)
+				if (materials == null)
 					materials = renderer.sharedMaterials;
-				if(foldOut == null)
+				if (foldOut == null)
 					foldOut = new List<bool>();
 
-				if(instance.paintSet.Count < materials.Length)
+				if (instance.paintSet.Count < materials.Length)
 				{
-					for(int i = instance.paintSet.Count; i < materials.Length; ++i)
+					for (int i = instance.paintSet.Count; i < materials.Length; ++i)
 						instance.paintSet.Add(new PaintSet
 						{
 							mainTextureName = "_MainTex",
@@ -1036,26 +1120,26 @@ namespace Es.InkPainter
 					foldOut.Clear();
 				}
 
-				if(instance.paintSet.Count > materials.Length)
+				if (instance.paintSet.Count > materials.Length)
 				{
 					instance.paintSet.RemoveRange(materials.Length, instance.paintSet.Count - materials.Length);
 					foldOut.Clear();
 				}
 
-				if(foldOut.Count < instance.paintSet.Count)
-					for(int i = foldOut.Count; i < instance.paintSet.Count; ++i)
+				if (foldOut.Count < instance.paintSet.Count)
+					for (int i = foldOut.Count; i < instance.paintSet.Count; ++i)
 						foldOut.Add(true);
 
 				EditorGUILayout.Space();
 
-				if(EditorApplication.isPlaying)
+				if (EditorApplication.isPlaying)
 				{
 					#region PlayModeOperation
 
 					EditorGUILayout.HelpBox("Can not change while playing.\n but you can saved painted texture.", MessageType.Info);
-					for(int i = 0; i < instance.paintSet.Count; ++i)
+					for (int i = 0; i < instance.paintSet.Count; ++i)
 					{
-						if(foldOut[i] = Foldout(foldOut[i], string.Format("Material \"{0}\"", materials[i].name)))
+						if (foldOut[i] = Foldout(foldOut[i], string.Format("Material \"{0}\"", materials[i].name)))
 						{
 							EditorGUILayout.BeginVertical("ProgressBarBack");
 							var backColorBuf = GUI.backgroundColor;
@@ -1063,14 +1147,14 @@ namespace Es.InkPainter
 
 							var paintSet = instance.paintSet[i];
 
-							if(paintSet.paintMainTexture != null && GUILayout.Button("Save main texture"))
+							if (paintSet.paintMainTexture != null && GUILayout.Button("Save main texture"))
 								SaveRenderTextureToPNG(paintSet.mainTexture != null ? paintSet.mainTexture.name : "main_texture", paintSet.paintMainTexture);
 
-							if(instance.paintSet[i].paintNormalTexture != null && GUILayout.Button("Save normal texture"))
+							if (instance.paintSet[i].paintNormalTexture != null && GUILayout.Button("Save normal texture"))
 								//TODO:https://github.com/EsProgram/InkPainter/issues/13
 								SaveRenderTextureToPNG(paintSet.normalTexture != null ? paintSet.normalTexture.name : "normal_texture", paintSet.paintNormalTexture);
 
-							if(instance.paintSet[i].paintHeightTexture != null && GUILayout.Button("Save height texture"))
+							if (instance.paintSet[i].paintHeightTexture != null && GUILayout.Button("Save height texture"))
 								SaveRenderTextureToPNG(paintSet.heightTexture != null ? paintSet.heightTexture.name : "height_texture", paintSet.paintHeightTexture);
 
 							GUI.backgroundColor = backColorBuf;
@@ -1079,13 +1163,13 @@ namespace Es.InkPainter
 					}
 					EditorGUILayout.Space();
 					instance.eraserDebug = EditorGUILayout.Toggle("Eracer debug option", instance.eraserDebug);
-					if(instance.eraserDebug)
+					if (instance.eraserDebug)
 					{
-						if(GUILayout.Button("Save eracer main texture"))
+						if (GUILayout.Button("Save eracer main texture"))
 							SaveRenderTextureToPNG("eracer_main", instance.debugEraserMainView);
-						if(GUILayout.Button("Save eracer normal texture"))
+						if (GUILayout.Button("Save eracer normal texture"))
 							SaveRenderTextureToPNG("eracer_normal", instance.debugEraserNormalView);
-						if(GUILayout.Button("Save eracer height texture"))
+						if (GUILayout.Button("Save eracer height texture"))
 							SaveRenderTextureToPNG("eracer_height", instance.debugEraserHeightView);
 					}
 
@@ -1095,9 +1179,9 @@ namespace Es.InkPainter
 				{
 					#region Property Setting
 
-					for(int i = 0; i < instance.paintSet.Count; ++i)
+					for (int i = 0; i < instance.paintSet.Count; ++i)
 					{
-						if(foldOut[i] = Foldout(foldOut[i], string.Format("Material \"{0}\"", materials[i].name)))
+						if (foldOut[i] = Foldout(foldOut[i], string.Format("Material \"{0}\"", materials[i].name)))
 						{
 							EditorGUI.indentLevel = 0;
 							EditorGUILayout.BeginVertical("ProgressBarBack");
@@ -1105,14 +1189,14 @@ namespace Es.InkPainter
 							//MainPaint
 							EditorGUI.BeginChangeCheck();
 							instance.paintSet[i].useMainPaint = EditorGUILayout.Toggle("Use Main Paint", instance.paintSet[i].useMainPaint);
-							if(EditorGUI.EndChangeCheck())
+							if (EditorGUI.EndChangeCheck())
 								ChangeValue(i, "Use Main Paint", p => p.useMainPaint = instance.paintSet[i].useMainPaint);
-							if(instance.paintSet[i].useMainPaint)
+							if (instance.paintSet[i].useMainPaint)
 							{
 								EditorGUI.indentLevel++;
 								EditorGUI.BeginChangeCheck();
 								instance.paintSet[i].mainTextureName = EditorGUILayout.TextField("MainTexture Property Name", instance.paintSet[i].mainTextureName);
-								if(EditorGUI.EndChangeCheck())
+								if (EditorGUI.EndChangeCheck())
 									ChangeValue(i, "Main Texture Name", p => p.mainTextureName = instance.paintSet[i].mainTextureName);
 								EditorGUI.indentLevel--;
 							}
@@ -1120,14 +1204,14 @@ namespace Es.InkPainter
 							//NormalPaint
 							EditorGUI.BeginChangeCheck();
 							instance.paintSet[i].useNormalPaint = EditorGUILayout.Toggle("Use NormalMap Paint", instance.paintSet[i].useNormalPaint);
-							if(EditorGUI.EndChangeCheck())
+							if (EditorGUI.EndChangeCheck())
 								ChangeValue(i, "Use Normal Paint", p => p.useNormalPaint = instance.paintSet[i].useNormalPaint);
-							if(instance.paintSet[i].useNormalPaint)
+							if (instance.paintSet[i].useNormalPaint)
 							{
 								EditorGUI.indentLevel++;
 								EditorGUI.BeginChangeCheck();
 								instance.paintSet[i].normalTextureName = EditorGUILayout.TextField("NormalMap Property Name", instance.paintSet[i].normalTextureName);
-								if(EditorGUI.EndChangeCheck())
+								if (EditorGUI.EndChangeCheck())
 									ChangeValue(i, "Normal Texture Name", p => p.normalTextureName = instance.paintSet[i].normalTextureName);
 								EditorGUI.indentLevel--;
 							}
@@ -1135,14 +1219,14 @@ namespace Es.InkPainter
 							//HeightPaint
 							EditorGUI.BeginChangeCheck();
 							instance.paintSet[i].useHeightPaint = EditorGUILayout.Toggle("Use HeightMap Paint", instance.paintSet[i].useHeightPaint);
-							if(EditorGUI.EndChangeCheck())
+							if (EditorGUI.EndChangeCheck())
 								ChangeValue(i, "Use Height Paint", p => p.useHeightPaint = instance.paintSet[i].useHeightPaint);
-							if(instance.paintSet[i].useHeightPaint)
+							if (instance.paintSet[i].useHeightPaint)
 							{
 								EditorGUI.indentLevel++;
 								EditorGUI.BeginChangeCheck();
 								instance.paintSet[i].heightTextureName = EditorGUILayout.TextField("HeightMap Property Name", instance.paintSet[i].heightTextureName);
-								if(EditorGUI.EndChangeCheck())
+								if (EditorGUI.EndChangeCheck())
 									ChangeValue(i, "Height Texture Name", p => p.heightTextureName = instance.paintSet[i].heightTextureName);
 								EditorGUI.indentLevel--;
 							}
@@ -1159,7 +1243,7 @@ namespace Es.InkPainter
 			private void SaveRenderTextureToPNG(string textureName, RenderTexture renderTexture, Action<TextureImporter> importAction = null)
 			{
 				string path = EditorUtility.SaveFilePanel("Save to png", Application.dataPath, textureName + "_painted.png", "png");
-				if(path.Length != 0)
+				if (path.Length != 0)
 				{
 					var newTex = new Texture2D(renderTexture.width, renderTexture.height);
 					RenderTexture.active = renderTexture;
@@ -1167,12 +1251,12 @@ namespace Es.InkPainter
 					newTex.Apply();
 
 					byte[] pngData = newTex.EncodeToPNG();
-					if(pngData != null)
+					if (pngData != null)
 					{
 						File.WriteAllBytes(path, pngData);
 						AssetDatabase.Refresh();
 						var importer = AssetImporter.GetAtPath(path) as TextureImporter;
-						if(importAction != null)
+						if (importAction != null)
 							importAction(importer);
 					}
 
@@ -1182,9 +1266,9 @@ namespace Es.InkPainter
 
 			private void ChangeValue(int paintSetIndex, string recordName, Action<PaintSet> assign)
 			{
-				Undo.RecordObjects(targets, "Change " + recordName);
-				foreach(var t in targets.Where(_t => _t is InkCanvas).Select(_t => _t as InkCanvas))
-					if(t.paintSet.Count > paintSetIndex)
+				UnityEditor.Undo.RecordObjects(targets, "Change " + recordName);
+				foreach (var t in targets.Where(_t => _t is InkCanvas).Select(_t => _t as InkCanvas))
+					if (t.paintSet.Count > paintSetIndex)
 					{
 						assign(t.paintSet[paintSetIndex]);
 						EditorUtility.SetDirty(t);
@@ -1206,12 +1290,12 @@ namespace Es.InkPainter
 				var e = Event.current;
 
 				var toggleRect = new Rect(rect.x + 4f, rect.y + 5f, 13f, 13f);
-				if(e.type == EventType.Repaint)
+				if (e.type == EventType.Repaint)
 				{
 					EditorStyles.foldout.Draw(toggleRect, false, false, foldout, false);
 				}
 
-				if(e.type == EventType.MouseDown && rect.Contains(e.mousePosition))
+				if (e.type == EventType.MouseDown && rect.Contains(e.mousePosition))
 				{
 					foldout = !foldout;
 					e.Use();
