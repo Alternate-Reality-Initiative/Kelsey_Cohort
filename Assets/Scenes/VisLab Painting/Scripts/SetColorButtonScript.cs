@@ -18,7 +18,7 @@ public class SetColorButtonScript : MonoBehaviour
         {
             button.onClick.AddListener(() =>
             {
-                mousePainter.GetBrush().Color = button.image.color;
+                mousePainter.GetCurrentBrush().Color = button.image.color;
                 mousePainter.SetErase(false);
             });
         }

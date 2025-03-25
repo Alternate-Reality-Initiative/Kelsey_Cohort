@@ -8,8 +8,9 @@ using System.Linq;
 
 public class MousePainter : MonoBehaviour
 {
+	private int currentBrush = 0;
 	[SerializeField]
-	private Brush brush;
+	private List<Brush> brushes = new List<Brush>();
 
 	[SerializeField]
 	private bool erase = false;
@@ -43,7 +44,9 @@ public class MousePainter : MonoBehaviour
 
 				if (paintObject != null)
 				{
-					success = erase ? paintObject.Erase(brush, hitInfo) : paintObject.Paint(brush, hitInfo);
+					success = erase ?
+						paintObject.Erase(brushes[currentBrush], hitInfo) :
+						paintObject.Paint(brushes[currentBrush], hitInfo);
 				}
 				if (!success)
 				{
@@ -83,9 +86,20 @@ public class MousePainter : MonoBehaviour
 		}
 	}
 
-	public Brush GetBrush()
+	public void ChangeBrush(int index)
 	{
-		return brush;
+		if (index < 0 || index >= brushes.Count)
+		{
+			Debug.LogError("Brush index <" + index + "> out of range");
+			return;
+		}
+
+		currentBrush = index;
+	}
+
+	public Brush GetCurrentBrush()
+	{
+		return brushes[currentBrush];
 	}
 
 	public void SetErase(bool value)
