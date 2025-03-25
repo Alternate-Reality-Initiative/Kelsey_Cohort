@@ -183,8 +183,9 @@ namespace Es.InkPainter
 #pragma warning restore 0649
 
 		// This will only work if you have 1 paintSet I think
+		private bool beenEdited = false;
 		private const int maxStates = 10;
-		InkCanvasStates states = new InkCanvasStates();
+		private InkCanvasStates states = new InkCanvasStates();
 
 		/// <summary>
 		/// Access data used for painting.
@@ -300,6 +301,7 @@ namespace Es.InkPainter
 			if (OnInitializedAfter != null)
 				OnInitializedAfter(this);
 
+			beenEdited = true;
 			SaveSnapshot();
 		}
 
@@ -787,6 +789,8 @@ namespace Es.InkPainter
 			if (renderCamera == null)
 				renderCamera = Camera.main;
 
+			beenEdited = true;
+
 			Vector3 p = transform.InverseTransformPoint(worldPos);
 			Matrix4x4 mvp = renderCamera.projectionMatrix * renderCamera.worldToCameraMatrix * transform.localToWorldMatrix;
 			if (MeshOperator.LocalPointToUV(p, mvp, out uv))
@@ -809,6 +813,7 @@ namespace Es.InkPainter
 		{
 			if (hitInfo.collider != null)
 			{
+				beenEdited = true;
 				if (hitInfo.collider is MeshCollider)
 					return PaintUVDirect(brush, hitInfo.textureCoord, materialSelector);
 				Debug.LogWarning("If you want to paint using a RaycastHit, need set MeshCollider for object.");
@@ -1024,13 +1029,49 @@ namespace Es.InkPainter
 		{
 			var p = paintSet[0];
 
-			if (p.useMainPaint && p.paintMainTexture != null)
+			// Remove any textures past the current point
+			states.mainSnapshots.RemoveRange(states.index + 1, states.Count - (states.index + 1));
+			states.normalSnapshots.RemoveRange(states.index + 1, states.Count - (states.index + 1));
+			states.heightSnapshots.RemoveRange(states.index + 1, states.Count - (states.index + 1));
+
+			// Save textures, adding null if no changes of if not using those textures
+			if (beenEdited && p.useMainPaint && p.paintMainTexture != null)
 			{
 				var mainTex = p.paintMainTexture;
 				Texture2D mainTexSnapshot = new Texture2D(mainTex.width, mainTex.height, TextureFormat.ARGB32, false);
 				Graphics.CopyTexture(mainTex, mainTexSnapshot);
 				states.mainSnapshots.Add(mainTexSnapshot);
 			}
+			else
+			{
+				states.mainSnapshots.Add(null);
+			}
+
+			if (beenEdited && p.useNormalPaint && p.paintNormalTexture != null)
+			{
+				var normalTex = p.paintNormalTexture;
+				Texture2D normalTexSnapshot = new Texture2D(normalTex.width, normalTex.height, TextureFormat.ARGB32, false);
+				Graphics.CopyTexture(normalTex, normalTexSnapshot);
+				states.normalSnapshots.Add(normalTexSnapshot);
+			}
+			else
+			{
+				states.normalSnapshots.Add(null);
+			}
+
+
+			if (beenEdited && p.useHeightPaint && p.paintHeightTexture != null)
+			{
+				var heightTex = p.paintHeightTexture;
+				Texture2D heightTexSnapshot = new Texture2D(heightTex.width, heightTex.height, TextureFormat.ARGB32, false);
+				Graphics.CopyTexture(heightTex, heightTexSnapshot);
+				states.heightSnapshots.Add(heightTexSnapshot);
+			}
+			else
+			{
+				states.heightSnapshots.Add(null);
+			}
+
 
 			states.index += 1;
 
@@ -1040,25 +1081,46 @@ namespace Es.InkPainter
 				states.index -= 1;
 			}
 
-			Debug.Log(states.Count + " " + states.index);
+			beenEdited = false;
 		}
 
 		public void Undo()
 		{
-			if (states.index == 0)
+			if (states.index <= 0)
 			{
 				return;
 			}
 
 			var p = paintSet[0];
+			states.index -= 1;
 
 			if (p.useMainPaint && p.paintMainTexture != null)
 			{
-				Debug.Log("Undo: " + states.Count + ", " + states.index);
-				Graphics.Blit(states.mainSnapshots[states.index], p.paintMainTexture);
+				var snapshot = states.mainSnapshots[states.index];
+				if (snapshot != null)
+				{
+					Graphics.Blit(snapshot, p.paintMainTexture);
+				}
 			}
 
-			states.index -= 1;
+			if (p.useNormalPaint && p.paintNormalTexture != null)
+			{
+				var snapshot = states.normalSnapshots[states.index];
+				if (snapshot != null)
+				{
+					Graphics.Blit(snapshot, p.paintNormalTexture);
+				}
+			}
+
+			if (p.useHeightPaint && p.paintHeightTexture != null)
+			{
+				var snapshot = states.heightSnapshots[states.index];
+				if (snapshot != null)
+				{
+					Graphics.Blit(snapshot, p.paintHeightTexture);
+				}
+			}
+
 		}
 
 		public void Redo()
@@ -1073,8 +1135,29 @@ namespace Es.InkPainter
 
 			if (p.useMainPaint && p.paintMainTexture != null)
 			{
-				Debug.Log("Redo: " + states.Count + ", " + states.index);
-				Graphics.Blit(states.mainSnapshots[states.index], p.paintMainTexture);
+				var snapshot = states.mainSnapshots[states.index];
+				if (snapshot != null)
+				{
+					Graphics.Blit(snapshot, p.paintMainTexture);
+				}
+			}
+
+			if (p.useNormalPaint && p.paintNormalTexture != null)
+			{
+				var snapshot = states.normalSnapshots[states.index];
+				if (snapshot != null)
+				{
+					Graphics.Blit(snapshot, p.paintNormalTexture);
+				}
+			}
+
+			if (p.useHeightPaint && p.paintHeightTexture != null)
+			{
+				var snapshot = states.heightSnapshots[states.index];
+				if (snapshot != null)
+				{
+					Graphics.Blit(snapshot, p.paintHeightTexture);
+				}
 			}
 		}
 

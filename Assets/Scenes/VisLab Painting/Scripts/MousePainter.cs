@@ -17,7 +17,6 @@ public class MousePainter : MonoBehaviour
 	InkCanvas[] canvases;
 
 	private bool isPainting = false;
-	private HashSet<InkCanvas> currentlyPainted = new HashSet<InkCanvas>();
 
 	private void Start()
 	{
@@ -28,30 +27,22 @@ public class MousePainter : MonoBehaviour
 	{
 		if (Input.GetMouseButton(0))
 		{
-			if (!isPainting)
-			{
-				// Just started painting a stroke
-				isPainting = true;
-				Debug.Log("Started drawing");
-			}
-
 			var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 			bool success = true;
 			RaycastHit hitInfo;
 			if (Physics.Raycast(ray, out hitInfo))
 			{
+				if (!isPainting)
+				{
+					// Just started painting a stroke
+					isPainting = true;
+					// Debug.Log("Started drawing");
+				}
+
 				var paintObject = hitInfo.transform.GetComponent<InkCanvas>();
 
 				if (paintObject != null)
 				{
-					// If this object has not been drawn on yet
-					if (!currentlyPainted.Contains(paintObject))
-					{
-						// TODO: Might not be needed
-					}
-
-					currentlyPainted.Add(paintObject);
-
 					success = erase ? paintObject.Erase(brush, hitInfo) : paintObject.Paint(brush, hitInfo);
 				}
 				if (!success)
@@ -64,30 +55,22 @@ public class MousePainter : MonoBehaviour
 		{
 			// Stopped painting
 			isPainting = false;
-			Debug.Log("Stopped drawing: " + currentlyPainted.Count);
+			// Debug.Log("Stopped drawing");
 
-			foreach (var inkCanvas in currentlyPainted)
+			foreach (var inkCanvas in canvases)
 			{
 				inkCanvas.SaveSnapshot();
 			}
-
-			currentlyPainted.Clear();
 		}
 
 		if (Input.GetKeyDown(KeyCode.Z))
 		{
-			foreach (var canvas in canvases)
-			{
-				canvas.Undo();
-			}
+			Undo();
 		}
 
 		if (Input.GetKeyDown(KeyCode.X))
 		{
-			foreach (var canvas in canvases)
-			{
-				canvas.Redo();
-			}
+			Redo();
 		}
 	}
 
@@ -108,5 +91,21 @@ public class MousePainter : MonoBehaviour
 	public void SetErase(bool value)
 	{
 		erase = value;
+	}
+
+	public void Undo()
+	{
+		foreach (var canvas in canvases)
+		{
+			canvas.Undo();
+		}
+	}
+
+	public void Redo()
+	{
+		foreach (var canvas in canvases)
+		{
+			canvas.Redo();
+		}
 	}
 }
