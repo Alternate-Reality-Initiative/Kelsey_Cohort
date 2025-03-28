@@ -9,6 +9,10 @@ using System.Linq;
 public class MousePainter : MonoBehaviour
 {
 	private int currentBrush = 0;
+
+	[SerializeField]
+	private int eraserBrushIndex;
+
 	[SerializeField]
 	private List<Brush> brushes = new List<Brush>();
 
@@ -16,7 +20,6 @@ public class MousePainter : MonoBehaviour
 	private bool erase = false;
 
 	InkCanvas[] canvases;
-
 	private bool isPainting = false;
 
 	private void Start()
@@ -33,17 +36,17 @@ public class MousePainter : MonoBehaviour
 			RaycastHit hitInfo;
 			if (Physics.Raycast(ray, out hitInfo))
 			{
-				if (!isPainting)
-				{
-					// Just started painting a stroke
-					isPainting = true;
-					// Debug.Log("Started drawing");
-				}
-
 				var paintObject = hitInfo.transform.GetComponent<InkCanvas>();
 
 				if (paintObject != null)
 				{
+					if (!isPainting)
+					{
+						// Just started painting a stroke
+						isPainting = true;
+						// Debug.Log("Started drawing");
+					}
+
 					success = erase ?
 						paintObject.Erase(brushes[currentBrush], hitInfo) :
 						paintObject.Paint(brushes[currentBrush], hitInfo);
@@ -93,6 +96,8 @@ public class MousePainter : MonoBehaviour
 			Debug.LogError("Brush index <" + index + "> out of range");
 			return;
 		}
+
+		erase = index == eraserBrushIndex;
 
 		currentBrush = index;
 	}
