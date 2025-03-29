@@ -107,11 +107,6 @@ public class MousePainter : MonoBehaviour
 		return brushes[currentBrush];
 	}
 
-	public void SetErase(bool value)
-	{
-		erase = value;
-	}
-
 	public void Undo()
 	{
 		foreach (var canvas in canvases)
