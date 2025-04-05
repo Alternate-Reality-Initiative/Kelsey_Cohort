@@ -8,11 +8,12 @@ using System.Threading.Tasks;
 using Amazon.S3;
 using Amazon;
 using Amazon.S3.Model;
-using System.IO;
 
 
 
 #if UNITY_EDITOR
+
+using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 
@@ -159,7 +160,6 @@ namespace Es.InkPainter
 			#endregion Constractor
 		}
 
-		[SerializeField]
 		private static Material paintMainMaterial = null;
 		private static Material paintNormalMaterial = null;
 		private static Material paintHeightMaterial = null;
@@ -436,7 +436,6 @@ namespace Es.InkPainter
 			}
 		}
 
-		#if UNITY_EDITOR
         private void SaveRenderTextureToPNG(string textureName, RenderTexture renderTexture, Action<TextureImporter> importAction = null)
         {
             string dateTime = DateTime.Now.ToString("yyyyMMdd_HHmmssfff");
@@ -465,7 +464,6 @@ namespace Es.InkPainter
                 UploadPngFile(path, uniqueString);
             }
         }
-		#endif
 
         public void UploadPngFile(string filePath, string textureName)
         {
@@ -524,9 +522,7 @@ namespace Es.InkPainter
 		{
 			foreach(var p in paintSet)
 			{
-				#if UNITY_EDITOR
                 SaveRenderTextureToPNG("test", p.paintMainTexture);
-				#endif
 				if(RenderTexture.active != p.paintMainTexture && p.paintMainTexture != null && p.paintMainTexture.IsCreated())
 					p.paintMainTexture.Release();
 				if(RenderTexture.active != p.paintNormalTexture && p.paintNormalTexture != null && p.paintNormalTexture.IsCreated())
@@ -1257,7 +1253,6 @@ namespace Es.InkPainter
 				}
 			}
 
-			#if UNITY_EDITOR
 			private void SaveRenderTextureToPNG(string textureName, RenderTexture renderTexture, Action<TextureImporter> importAction = null)
 			{
 				string path = EditorUtility.SaveFilePanel("Save to png", Application.dataPath, textureName + "_painted.png", "png");
@@ -1281,7 +1276,6 @@ namespace Es.InkPainter
 					Debug.Log(path);
 				}
 			}
-			#endif
 
 			private void ChangeValue(int paintSetIndex, string recordName, Action<PaintSet> assign)
 			{
