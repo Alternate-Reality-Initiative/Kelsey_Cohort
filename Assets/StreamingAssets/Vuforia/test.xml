@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <QCARConfig>
   <Tracking>
+    <ImageTarget name="augustus" size="1.000000 1.038062" />
+    <ImageTarget name="apulianvolutekraterimage" size="1.000000 1.395939" />
     <ImageTarget name="duck" size="1.000000 1.000000" />
   </Tracking>
 </QCARConfig>
