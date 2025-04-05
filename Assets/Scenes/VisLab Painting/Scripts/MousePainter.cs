@@ -122,4 +122,12 @@ public class MousePainter : MonoBehaviour
 			canvas.Redo();
 		}
 	}
+
+	public void Clear()
+	{
+		foreach (var canvas in canvases)
+		{
+			canvas.Clear();
+		}
+	}
 }

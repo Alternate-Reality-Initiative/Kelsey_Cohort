@@ -1161,6 +1161,29 @@ namespace Es.InkPainter
 			}
 		}
 
+		public void Clear()
+		{
+			var p = paintSet[0];
+
+			if (p.useMainPaint && p.paintMainTexture != null)
+			{
+				Graphics.Blit(p.mainTexture, p.paintMainTexture);
+			}
+
+			if (p.useNormalPaint && p.paintNormalTexture != null)
+			{
+				Graphics.Blit(p.normalTexture, p.paintNormalTexture);
+			}
+
+			if (p.useHeightPaint && p.paintHeightTexture != null)
+			{
+				Graphics.Blit(p.heightTexture, p.paintHeightTexture);
+			}
+
+			beenEdited = true;
+			SaveSnapshot();
+		}
+
 		#endregion PublicMethod
 
 		#region CustomEditor
