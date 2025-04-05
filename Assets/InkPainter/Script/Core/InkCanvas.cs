@@ -436,6 +436,8 @@ namespace Es.InkPainter
 			}
 		}
 
+		#if UNITY_EDITOR
+
         private void SaveRenderTextureToPNG(string textureName, RenderTexture renderTexture, Action<TextureImporter> importAction = null)
         {
             string dateTime = DateTime.Now.ToString("yyyyMMdd_HHmmssfff");
@@ -514,6 +516,7 @@ namespace Es.InkPainter
                 Debug.LogError($"Failed to upload PNG: {ex.Message}");
             }
         }
+		#endif
 
         /// <summary>
         /// Rendertexture release process.
@@ -522,7 +525,9 @@ namespace Es.InkPainter
 		{
 			foreach(var p in paintSet)
 			{
+				#if UNITY_EDITOR
                 SaveRenderTextureToPNG("test", p.paintMainTexture);
+				#endif
 				if(RenderTexture.active != p.paintMainTexture && p.paintMainTexture != null && p.paintMainTexture.IsCreated())
 					p.paintMainTexture.Release();
 				if(RenderTexture.active != p.paintNormalTexture && p.paintNormalTexture != null && p.paintNormalTexture.IsCreated())
