@@ -198,7 +198,7 @@ Canvas:
   m_OverrideSorting: 0
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
-  m_VertexColorAlwaysGammaSpace: 0
+  m_VertexColorAlwaysGammaSpace: 1
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
@@ -857,7 +857,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 886328de6a5c14cbb85854fdf1a5085b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  StatusFilter: 1
+  StatusFilter: 0
   UsePoseSmoothing: 0
   AnimationCurve:
     serializedVersion: 2
@@ -3211,7 +3211,7 @@ PrefabInstance:
     - target: {fileID: 7282332469017490271, guid: 3b497009a4bad044b849f3f0027baff1,
         type: 3}
       propertyPath: paintSet.Array.data[0].useNormalPaint
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7282332469017490271, guid: 3b497009a4bad044b849f3f0027baff1,
         type: 3}
