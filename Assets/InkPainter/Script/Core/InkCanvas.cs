@@ -4,6 +4,8 @@ using System.Linq;
 using UnityEngine;
 using Es.InkPainter.Effective;
 using System.Runtime.CompilerServices;
+using Unity.VisualScripting.Antlr3.Runtime.Misc;
+
 
 
 #if UNITY_EDITOR
@@ -1037,6 +1039,8 @@ namespace Es.InkPainter
 			// Save textures, adding null if no changes of if not using those textures
 			if (beenEdited && p.useMainPaint && p.paintMainTexture != null)
 			{
+				Debug.Log("Save Snap");
+
 				var mainTex = p.paintMainTexture;
 				Texture2D mainTexSnapshot = new Texture2D(mainTex.width, mainTex.height, TextureFormat.ARGB32, false);
 				Graphics.CopyTexture(mainTex, mainTexSnapshot);
@@ -1044,6 +1048,9 @@ namespace Es.InkPainter
 			}
 			else
 			{
+
+				Debug.Log("Save Null");
+
 				states.mainSnapshots.Add(null);
 			}
 
@@ -1099,6 +1106,7 @@ namespace Es.InkPainter
 				var snapshot = states.mainSnapshots[states.index];
 				if (snapshot != null)
 				{
+					Debug.Log("Undo");
 					Graphics.Blit(snapshot, p.paintMainTexture);
 				}
 			}
@@ -1138,6 +1146,7 @@ namespace Es.InkPainter
 				var snapshot = states.mainSnapshots[states.index];
 				if (snapshot != null)
 				{
+					Debug.Log("Redo");
 					Graphics.Blit(snapshot, p.paintMainTexture);
 				}
 			}
