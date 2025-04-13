@@ -1,4 +1,4 @@
-Library: /Users/sarraf/Coding/Unity/Kelsey_Cohort/Temp/BurstOutput/tempburstlibs/arm64-v8a/lib_burst_generated
+Library: C:\Users\andyy\Unity_projects\PaintingAugustus\Temp\BurstOutput\tempburstlibs\arm64-v8a\lib_burst_generated
 --platform=Android
 --backend=burst-llvm-18
 --target=ARMV8A_AARCH64
@@ -7,11 +7,11 @@ Library: /Users/sarraf/Coding/Unity/Kelsey_Cohort/Temp/BurstOutput/tempburstlibs
 --dump=Function
 --float-precision=Standard
 --target-framework=NetFramework
---generate-link-xml=Temp/burst.link.xml
---temp-folder=/Users/sarraf/Coding/Unity/Kelsey_Cohort/Temp/Burst
---key-folder=/Applications/Unity/Hub/Editor/2022.3.37f1/PlaybackEngines/AndroidPlayer
---decode-folder=/Users/sarraf/Coding/Unity/Kelsey_Cohort/Library/Burst
---output=/Users/sarraf/Coding/Unity/Kelsey_Cohort/Temp/BurstOutput/tempburstlibs/arm64-v8a/lib_burst_generated
+--generate-link-xml=Temp\burst.link.xml
+--temp-folder=C:\Users\andyy\Unity_projects\PaintingAugustus\Temp\Burst
+--key-folder=C:/Program Files/Unity/Hub/Editor/2022.3.37f1/Editor/Data/PlaybackEngines/AndroidPlayer
+--decode-folder=C:\Users\andyy\Unity_projects\PaintingAugustus\Library\Burst
+--output=C:\Users\andyy\Unity_projects\PaintingAugustus\Temp\BurstOutput\tempburstlibs\arm64-v8a\lib_burst_generated
 --pdb-search-paths=Temp/ManagedSymbols/
 
 --method=UnityEngine.XR.Interaction.Toolkit.Utilities.BurstMathUtility, Unity.XR.Interaction.Toolkit, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null::ProjectOnPlane(Unity.Mathematics.float3&, Unity.Mathematics, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null|Unity.Mathematics.float3&, Unity.Mathematics, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null|Unity.Mathematics.float3&, Unity.Mathematics, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null)--1819bc9925667b008fd6c3e6019ccf71
