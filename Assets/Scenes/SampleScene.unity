@@ -941,13 +941,13 @@ MonoBehaviour:
   PreviewVisible: 1
   RuntimeOcclusion: 0
   RuntimeCollider: 0
-  mTrackableName: sample
+  mTrackableName: samplecard
   mInitializedInEditor: 1
   mDataSetPath: Vuforia/KelseyDemo.xml
-  mAspectRatio: 1.567398
+  mAspectRatio: 1.21735
   mImageTargetType: 0
   mWidth: 1
-  mHeight: 1.567398
+  mHeight: 1.21735
   mRuntimeTexture: {fileID: 0}
   mMotionHint: 1
   mTrackingOptimization: 0
@@ -983,7 +983,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mObserverBehaviour: {fileID: 1128133723}
   mHiddenRoot: {fileID: 0}
-  mTargetName: sample
+  mTargetName: samplecard
   mDatasetName: Vuforia/KelseyDemo.xml
   mCastedBehaviour: {fileID: 1128133723}
   mMeshFilter: {fileID: 0}
@@ -1066,13 +1066,13 @@ MonoBehaviour:
   PreviewVisible: 1
   RuntimeOcclusion: 0
   RuntimeCollider: 0
-  mTrackableName: coin
+  mTrackableName: atheniantetradrachmcard
   mInitializedInEditor: 1
   mDataSetPath: Vuforia/KelseyDemo.xml
-  mAspectRatio: 0.914552
+  mAspectRatio: 1.317736
   mImageTargetType: 0
   mWidth: 1
-  mHeight: 0.914552
+  mHeight: 1.317736
   mRuntimeTexture: {fileID: 0}
   mMotionHint: 1
   mTrackingOptimization: 0
@@ -1108,7 +1108,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mObserverBehaviour: {fileID: 1203224331}
   mHiddenRoot: {fileID: 0}
-  mTargetName: coin
+  mTargetName: atheniantetradrachmcard
   mDatasetName: Vuforia/KelseyDemo.xml
   mCastedBehaviour: {fileID: 1203224331}
   mMeshFilter: {fileID: 0}

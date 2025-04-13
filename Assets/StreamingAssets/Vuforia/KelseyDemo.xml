@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <QCARConfig>
   <Tracking>
-    <ImageTarget name="sample" size="1.000000 1.567398" />
-    <ImageTarget name="coin" size="1.000000 0.914552" />
+    <ImageTarget name="atheniantetradrachmcard" size="1.000000 1.317736" />
+    <ImageTarget name="samplecard" size="1.000000 1.317736" />
   </Tracking>
 </QCARConfig>
